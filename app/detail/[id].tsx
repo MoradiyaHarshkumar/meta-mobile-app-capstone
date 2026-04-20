@@ -15,6 +15,7 @@ export default function DetailScreen() {
   const [item, setItem] = useState<MenuItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -56,7 +57,16 @@ export default function DetailScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Image source={{ uri: item.image }} style={styles.image} contentFit="cover" />
+        <View style={styles.imageWrap}>
+          <Image
+            source={imageError ? require('@/assets/images/react-logo.png') : { uri: item.image }}
+            style={styles.image}
+            contentFit="contain"
+            onError={() => {
+              setImageError(true);
+            }}
+          />
+        </View>
 
         <View style={styles.content}>
           <Text style={styles.title}>{item.title}</Text>
@@ -94,9 +104,15 @@ const styles = StyleSheet.create({
   container: {
     paddingBottom: 28,
   },
-  image: {
+  imageWrap: {
     width: '100%',
     height: 320,
+    backgroundColor: '#f8fafc',
+    padding: 16,
+  },
+  image: {
+    width: '100%',
+    height: '100%',
     backgroundColor: '#f3f4f6',
   },
   content: {

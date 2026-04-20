@@ -19,6 +19,7 @@ import { MenuItem } from '@/types/item';
 export default function HomeScreen() {
   const [items, setItems] = useState<MenuItem[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -64,9 +65,22 @@ export default function HomeScreen() {
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => {
           const isFavorite = favoriteIds.includes(item.id);
+          const imageSource = imageErrors[item.id]
+            ? require('@/assets/images/react-logo.png')
+            : { uri: item.image };
+
           return (
             <View style={styles.card}>
-              <Image source={{ uri: item.image }} style={styles.cardImage} contentFit="cover" />
+              <View style={styles.cardImageWrap}>
+                <Image
+                  source={imageSource}
+                  style={styles.cardImage}
+                  contentFit="contain"
+                  onError={() => {
+                    setImageErrors((prev) => ({ ...prev, [item.id]: true }));
+                  }}
+                />
+              </View>
 
               <View style={styles.cardBody}>
                 <Text style={styles.itemTitle}>{item.title}</Text>
@@ -144,9 +158,15 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0',
     overflow: 'hidden',
   },
-  cardImage: {
+  cardImageWrap: {
     width: '100%',
     height: 170,
+    backgroundColor: '#f8fafc',
+    padding: 12,
+  },
+  cardImage: {
+    width: '100%',
+    height: '100%',
     backgroundColor: '#f1f5f9',
   },
   cardBody: {
