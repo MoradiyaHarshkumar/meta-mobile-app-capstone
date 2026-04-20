@@ -1,98 +1,187 @@
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { fetchMenuItems } from '@/lib/api';
+import { getFavoriteIds, toggleFavorite } from '@/lib/storage';
+import { MenuItem } from '@/types/item';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const [items, setItems] = useState<MenuItem[]>([]);
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  useEffect(() => {
+    let mounted = true;
+
+    const loadData = async () => {
+      const [menuItems, favorites] = await Promise.all([fetchMenuItems(), getFavoriteIds()]);
+      if (mounted) {
+        setItems(menuItems);
+        setFavoriteIds(favorites);
+        setLoading(false);
+      }
+    };
+
+    loadData();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.loaderContainer}>
+        <ActivityIndicator size="large" />
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.brand}>Little Lemon</Text>
+          <Text style={styles.subtitle}>Fresh menu from API</Text>
+        </View>
+        <Image source={require('@/assets/images/icon.png')} style={styles.logo} contentFit="contain" />
+      </View>
+
+      <FlatList
+        data={items}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
+        renderItem={({ item }) => {
+          const isFavorite = favoriteIds.includes(item.id);
+          return (
+            <View style={styles.card}>
+              <Image source={{ uri: item.image }} style={styles.cardImage} contentFit="cover" />
+
+              <View style={styles.cardBody}>
+                <Text style={styles.itemTitle}>{item.title}</Text>
+                <Text style={styles.itemMeta}>${item.price.toFixed(2)} • {item.category}</Text>
+
+                <View style={styles.cardActions}>
+                  <TouchableOpacity
+                    style={styles.favoriteButton}
+                    onPress={async () => {
+                      const updated = await toggleFavorite(item.id);
+                      setFavoriteIds(updated);
+                    }}>
+                    <Ionicons name={isFavorite ? 'heart' : 'heart-outline'} size={17} color="#ef4444" />
+                    <Text style={styles.favoriteButtonText}>
+                      {isFavorite ? 'Saved' : 'Favorite'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.navigateButton}
+                    onPress={() => router.push(`/detail/${item.id}`)}>
+                    <Ionicons name="chevron-forward-circle" size={22} color="#0ea5e9" />
+                    <Text style={styles.navigateText}>Details</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          );
+        }}
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
+  loaderContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  header: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  brand: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: '#1f2937',
+  },
+  subtitle: {
+    color: '#475569',
+    marginTop: 2,
+  },
+  logo: {
+    width: 48,
+    height: 48,
+  },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+    gap: 14,
+  },
+  card: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    overflow: 'hidden',
+  },
+  cardImage: {
+    width: '100%',
+    height: 170,
+    backgroundColor: '#f1f5f9',
+  },
+  cardBody: {
+    padding: 12,
+    gap: 8,
+  },
+  itemTitle: {
+    fontWeight: '700',
+    fontSize: 16,
+    color: '#0f172a',
+  },
+  itemMeta: {
+    color: '#334155',
+  },
+  cardActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  favoriteButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  favoriteButtonText: {
+    color: '#334155',
+    fontWeight: '600',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  navigateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  navigateText: {
+    color: '#0284c7',
+    fontWeight: '700',
   },
 });
