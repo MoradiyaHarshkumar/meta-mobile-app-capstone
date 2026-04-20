@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   Alert,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -56,6 +57,11 @@ export default function SettingsScreen() {
 
   const onNotificationToggle = async (enabled: boolean) => {
     if (enabled) {
+      if (Platform.OS === 'web') {
+        Alert.alert('Web limitation', 'Please use Android or iOS to enable and test local notifications.');
+        return;
+      }
+
       const granted = await requestNotificationPermission();
       if (!granted) {
         Alert.alert('Permission denied', 'Please allow notification permission in your device settings.');
@@ -69,7 +75,7 @@ export default function SettingsScreen() {
   const onSendTestNotification = async () => {
     try {
       await triggerTestNotification();
-      Alert.alert('Success', 'Test notification triggered successfully.');
+      Alert.alert('Success', 'Test notification triggered. It should appear after about 1 second.');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to trigger notification.';
       Alert.alert('Notification error', message);
