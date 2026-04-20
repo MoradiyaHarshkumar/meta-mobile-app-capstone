@@ -46,6 +46,11 @@ export default function SettingsScreen() {
       return;
     }
 
+    if (item === 'Profile' || item === 'Favorites') {
+      router.push('/(tabs)/profile');
+      return;
+    }
+
     Alert.alert('Menu item selected', item);
   };
 
